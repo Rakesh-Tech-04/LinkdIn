@@ -32,6 +32,7 @@ export const login = async (req, res) => {
         id: user._id,
         fullname: user.fullname
     }
+    
     let token = generateToken(payload)
     res.cookie('LinkdInToken', token, {
         httpOnly: true,

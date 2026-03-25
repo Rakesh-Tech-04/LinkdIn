@@ -3,6 +3,7 @@ import 'dotenv/config';
 import cookieParser from "cookie-parser";
 import authRouter from './routes/auth.js'
 import mongoose from "mongoose";
+import cors from 'cors'
 
 async function main() {
     mongoose.connect(process.env.MONGOURL)
@@ -15,6 +16,11 @@ main().then(() => {
     })
 
 let app = e()
+
+app.use(cors({
+    origin: process.env.DEVELOPMENTURL,
+    credentials: true
+}))
 
 app.use(e.json())
 app.use(e.urlencoded({ extended: true }))
