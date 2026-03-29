@@ -2,9 +2,17 @@ import User from "../models/user.js"
 import bcrypt from 'bcrypt'
 import { generateToken } from '../middelware/authentication.js'
 import ExpressError from '../utils/ExpressError.js'
+import jwt from 'jsonwebtoken'
 
 export const signup = async (req, res) => {
     let { username, firstname, lastname, email, password } = req.body
+
+    let user = await User.findOne({ email })
+    if (user) throw new ExpressError(400, 'Email is already Exists')
+
+    user = await User.findOne({ username })
+    if (user) throw new ExpressError(400, 'Username is already Exists')
+
     let fullname = firstname + " " + lastname
     password = await bcrypt.hash(password, 10)
     let newUser = await User.create({ username, fullname, password, email })
@@ -16,9 +24,10 @@ export const signup = async (req, res) => {
     res.cookie('LinkdInToken', token, {
         httpOnly: true,
         secure: true,
-        sameSite: 'Strict'
+        sameSite: 'Strict',
+        maxAge: 1000 * 60 * 60 * 24
     })
-    res.status(401).json({ success: true, message: "Welcome to LinkdIn" })
+    res.status(201).json({ success: true, message: "Welcome to LinkdIn", data: { username: newUser.username, fullname: newUser.fullname, email: newUser.email } })
 }
 
 export const login = async (req, res) => {
@@ -32,14 +41,15 @@ export const login = async (req, res) => {
         id: user._id,
         fullname: user.fullname
     }
-    
+
     let token = generateToken(payload)
     res.cookie('LinkdInToken', token, {
         httpOnly: true,
         secure: true,
-        sameSite: 'Strict'
+        sameSite: 'Strict',
+        maxAge: 1000 * 60 * 60 * 24
     })
-    res.status(401).json({ success: true, message: "Welcome back to LinkdIn" })
+    res.status(200).json({ success: true, message: "Welcome back to LinkdIn", data: { username: user.username, fullname: user.fullname, email: user.email } })
 }
 
 export const logout = async (req, res) => {
@@ -49,4 +59,16 @@ export const logout = async (req, res) => {
         sameSite: 'Strict'
     })
     res.status(200).json({ success: true, message: 'You Logged Out' })
+}
+
+export const refreshToken = async (req, res) => {
+    let token = req.cookies.LinkdInToken
+    try {
+        let decode = jwt.verify(token, process.env.JWTSECUREKEY)
+        let user = await User.findById(decode.id)
+        res.status(200).json(user)
+    }
+    catch {
+        res.status(200).json({})
+    }
 }
